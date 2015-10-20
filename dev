@@ -1,0 +1,3 @@
+watchify game/main.js -o client/index.js &
+http-server &
+node server/server.js &
