@@ -1,52 +1,4 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-exports.bg = [
-  {
-    filter: function(map, tile) {
-      var above = map.getTile(tile.x, tile.y-1, 'terrain');
-      if(tile.index === 7 && !above) {
-        return true;
-      }
-      return false;
-    },
-    result: function(map, x, y) {
-        map.putTile(44, x, y-1, 'bg');
-    },
-    chance: 0.20
-  },
-  {
-    filter: function(map, tile) {
-      var above = map.getTile(tile.x, tile.y-1, 'terrain');
-      if(tile.index === 7 && !above) {
-        return true;
-      }
-      return false;
-    },
-    result: function(map, x, y) {
-        map.putTile(45, x, y-1, 'bg');
-    },
-    chance: 0.20
-  }
-];
-
-exports.fg = [
-  {
-    filter: function(map, tile) {
-      var below = map.getTile(tile.x, tile.y+1, 'terrain');
-      if(tile.index === 7 && !below) {
-        return true;
-      }
-      return false;
-    },
-    result: function(map, x, y) {
-        map.putTile(12, x, y+1, 'fg');
-    },
-    chance: 0.10
-  },
-];
-
-},{}],2:[function(require,module,exports){
-var gen = require('./terrain-gen.js');
-
 var io = require('../node_modules/socket.io-client/socket.io.js');
 var socket = io('http://localhost/');
 socket.on('connect', function() {
@@ -58,79 +10,84 @@ socket.on('connect', function() {
   });
 });
 
-var tilemap, terrain, fg, bg, cursors;
+var tilemap, cursors;
 var p;
-
-// nine tilemaps, always collide with maps[4]
-var maps = [];
-
-var setupTileCollision = function(map) {
-  map.setCollisionBetween(1, 128);
-}
-
-var createTilesection = function(x, y) {
-  var section = game.add.tilemap();
-  section.addTilesetImage('tiles', undefined, 8, 8);
-  setupTileCollision(section);
-
-  resetTilemap(section);
-  gen.generateArea(section, x, y);
-
-  return section;
-}
-
-var resetTilemap = function(map) {
-  map.removeAllLayers();
-  map.bg = map.create('bg', 32, 32, 8, 8);
-  map.terrain = map.createBlankLayer('terrain', 32, 32, 8, 8);
-  map.fg = map.createBlankLayer('fg', 32, 32, 8, 8);
-  map.setLayer(map.terrain);
-}
 
 var preload = function() {
   game.load.spritesheet('tiles', '../assets/tiles.png', 8, 8);
   game.load.spritesheet('astro', '../assets/astro.png', 10, 10);
+  game.load.tilemap('level', '../maps/level.json', null, Phaser.Tilemap.TILED_JSON);
 }
 
 var create = function() {
   //game.stage.backgroundColor = '#2d2d2d';
   game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
-  game.scale.setUserScale(3, 3);
+  game.scale.setUserScale(2, 2);
   game.antialias = false;
 
   game.physics.startSystem(Phaser.Physics.ARCADE);
-  game.physics.arcade.gravity.y = 250;
+  game.physics.arcade.gravity.y = 100;
 
-  tilemap = createTilesection(0, 0);
-  tilemap.terrain.resizeWorld();
+  tilemap = game.add.tilemap('level');
+  tilemap.addTilesetImage('tiles', 'tiles');
+  tilemap.bg = tilemap.createLayer('bg');
+  tilemap.fg = tilemap.createLayer('fg');
+  tilemap.setLayer(tilemap.fg);
+  tilemap.fg.resizeWorld();
+  tilemap.setCollisionBetween(1, 256);
 
   p = game.add.sprite(10, 10, 'astro');
-  game.physics.enable(p);
+  p.x = 1024;
+  p.y = 512;
+  game.physics.enable(p, Phaser.Physics.ARCADE);
 
-  //p.body.bounce.set(0.1);
-  p.body.drag.set(400, 50);
-  p.body.maxVelocity.set(60, 120);
-  p.body.setSize(3, 8, 3, 2);
-  //p.body.collideWorldBounds = true;
-  game.camera.follow(p);
+  /*
+  movement mechanics:
+
+  */
+
+  //p.body.drag.set(100, 50);
+  //p.body.maxVelocity.y = 500;
+  p.body.setSize(10, 10, 0, 0);
+  //p.body.tilePadding.set(16, 16);
+  p.body.collideWorldBounds = true;
+  //p.body.allowRotation = false;
+
+  game.camera.follow(p, Phaser.Camera.FOLLOW_PLATFORMER);
 
   cursors = game.input.keyboard.createCursorKeys();
 }
 
 var update = function() {
-  game.physics.arcade.collide(p, tilemap.terrain);
+  game.physics.arcade.collide(p, tilemap.fg);
 
+  p.body.velocity.x = 0;
   if(cursors.up.isDown && p.body.onFloor()) {
-    p.body.velocity.y = -120;
+    p.body.velocity.y = -80;
   }
 
   if(cursors.left.isDown) {
-    p.body.velocity.x -= 20;
+    if(p.body.blocked.left && tilemap.getTileWorldXY(p.body.x+5-8, p.body.y-6) === null) {
+      // clamber
+      p.body.velocity.y = -40;
+    }
+
+    // move left
+    p.body.velocity.x = -30;
   }
   if(cursors.right.isDown) {
-    p.body.velocity.x += 20;
+    if(p.body.blocked.right && tilemap.getTileWorldXY(p.body.x+5+8, p.body.y-6) === null) {
+      // clamber
+      p.body.velocity.y = -40;
+    }
+
+    p.body.velocity.x = 30;
   }
 
+  //game.physics.arcade.collide(p, tilemap.fg);
+    //downLastFrame = p.body.onFloor();
+
+/*
   if(p.body.right < game.world.bounds.x) {
     p.body.x += game.world.bounds.width;
     tilemap.bg.destroy();
@@ -139,148 +96,20 @@ var update = function() {
     tilemap.destroy();
     tilemap = createTilesection(-1, 0);
   }
+*/
 
-
-  tilemap.bg.sendToBack();
-  tilemap.fg.bringToTop();
+  //tilemap.bg.sendToBack();
+  //tilemap.fg.bringToTop();
 }
 
 var render = function() {
+  game.debug.bodyInfo(p, 32, 32);
 }
 
-var game = new Phaser.Game(256, 256, Phaser.AUTO, 'game', {
+var game = new Phaser.Game(512, 512, Phaser.AUTO, 'thing', {
   preload: preload, create: create, update: update, render: render });
 
-},{"../node_modules/socket.io-client/socket.io.js":4,"./terrain-gen.js":3}],3:[function(require,module,exports){
-var genRules = require('./gen-rules.js');
-
-var WIDTH = 32;
-var HEIGHT = 32;
-
-/*
-   1,0   3,0
-0,0   2,0   4,0
-   1,1   3,1
- ____
-|_|_|
-|_|_|
-*/
-var generateBorder = function(x1, y1, x2, y2) {
-  var game = Phaser.GAMES[0];
-  game.rnd.sow([[x1,y1], [x2,y2]].sort());
-  var border = [];
-  for (var i = 0; i < WIDTH; i++) {
-    border[i] = game.rnd.integerInRange(0,1);
-  }
-  return border;
-}
-
-var do2d = function(tiles, cb) {
-  var i,j;
-  for(i=0; i<tiles.length; i++) {
-    for(j=0; j<tiles[0].length; j++) {
-      cb(tiles, i, j);
-    }
-  }
-}
-
-var neighbors = function(tiles, x, y) {
-  var offs = [[-1,-1],[0,-1],[1,-1],
-             [-1, 0],      ,[1, 0],
-             [-1, 1],[0, 1],[1, 1]];
-  var count = 0;
-  offs.forEach(function(offset) {
-    var offx = Math.min(tiles[0].length-1, Math.max(0, x+offset[0]));
-    var offy = Math.min(tiles.length-1, Math.max(0, y+offset[1]));
-    count += tiles[offx][offy] > 0 ? 1 : 0;
-  });
-  return count;
-}
-
-var stepAutomata = function(tiles, rules) {
-  do2d(tiles, function(arr, i, j) {
-    var n = neighbors(tiles, i, j);
-    if(rules.born[n]) {
-      tiles[i][j] = 1;
-    }
-    if(rules.live[n]) {
-      tiles[i][j] = arr[i][j];
-    } else {
-      tiles[i][j] = 0;
-    }
-  });
-}
-
-
-var make2dArray = function(w, h) {
-  var arr = [];
-  for (var i = 0; i < h; i++) {
-    arr[i] = [];
-    for (var j = 0; j < w; j++) {
-      arr[i][j] = 0;
-    }
-  }
-  return arr;
-}
-
-var caveGenerator = function(map, x, y) {
-  var tiles = make2dArray(WIDTH, HEIGHT);
-  do2d(tiles, function(arr, i, j) {
-    tiles[i][j] = Math.floor(Math.random()*2);
-  });
-  [[-1,0],[0,-1],[1,0],[0,1]].forEach(function(offset) {
-    var border = generateBorder(x, y, x+offset[0], y+offset[1]);
-    var dir = [Math.abs(offset[1]), Math.abs(offset[0])];
-    var startx = offset.x > 0 ? WIDTH : 0;
-    var starty = offset.y > 0 ? HEIGHT : 0;
-    console.log(dir);
-    for (var i = 0; i < border.length; i++) {
-      tiles[startx+dir[0]*i][starty+dir[1]*i] = border[i];
-    }
-  })
-
-  for(i=0; i<1; i++) {
-    stepAutomata(tiles, {
-      born: {5:1, 6:1, 7:1, 8:1},
-      live: {4:1, 5:1, 6:1, 7:1, 8:1}
-    });
-  }
-
-  do2d(tiles, function(arr, i, j) {
-    map.putTile(arr[i][j] === 1 ? 7 : -1, i, j, 'terrain');
-  });
-}
-
-
-var decorator = function(rules) {
-  return function(map, x, y) {
-    map.forEach(function(tile) {
-      var totalChance = 0.0;
-      rules.some(function(rule) {
-        if(rule.filter(map, tile)) {
-          totalChance += rule.chance;
-          var chance = Math.random();
-          if(chance < totalChance) {
-            rule.result(map, tile.x, tile.y);
-            return true;
-          }
-          return false;
-        }
-      });
-    })
-  };
-}
-
-var fgDecorator = decorator(genRules.fg);
-var bgDecorator = decorator(genRules.bg);
-
-exports.generateArea = function(map, x, y) {
-  caveGenerator(map, x, y);
-  bgDecorator(map, x, y);
-  fgDecorator(map, x, y);
-}
-
-},{"./gen-rules.js":1}],4:[function(require,module,exports){
+},{"../node_modules/socket.io-client/socket.io.js":2}],2:[function(require,module,exports){
 (function (global){
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.io=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 
@@ -7272,4 +7101,4 @@ function toArray(list, index) {
 });
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}]},{},[2]);
+},{}]},{},[1]);
