@@ -55,11 +55,11 @@ exports.createLaser = function(game, obj) {
   laser.toggle = function() {
     laser.active = !laser.active;
     if(laser.beam) {
-      laser.beam.forEach(function(beam) {
-        beam.exists = !beam.exists;
+      laser.beam.forEach(function(beam, i) {
+        setTimeout(function() { beam.exists = !beam.exists; }, i*10);
       })
     }
-    laser.emitter.on = laser.active;
+    setTimeout(function() { laser.emitter.on = laser.active; }, laser.beam.length*10);
   }
 
   laser.beam = createBeam(game, laser);
