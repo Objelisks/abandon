@@ -161,7 +161,7 @@ var create = function() {
 
   game.player = players.createPlayer(game);
 
-  game.camera.follow(game.player, Phaser.Camera.FOLLOW_PLATFORMER);
+  //game.camera.follow(game.player, Phaser.Camera.FOLLOW_PLATFORMER);
 
   game.cursors = game.input.keyboard.createCursorKeys();
 
@@ -173,6 +173,9 @@ var create = function() {
 }
 
 var update = function() {
+  game.camera.x = Math.floor((game.player.x) / 256) * 256;
+  game.camera.y = Math.floor((game.player.y) / 256) * 256;
+
   game.tilemap.bg.sendToBack();
   game.tilemap.fg.bringToTop();
 }
@@ -181,14 +184,14 @@ var render = function() {
   //game.debug.bodyInfo(p, 32, 32);
 }
 
-var game = new Phaser.Game(512, 512, Phaser.AUTO, 'thing', {
+var game = new Phaser.Game(256, 256, Phaser.AUTO, 'thing', {
   preload: preload, create: create, update: update, render: render });
 
 },{"../node_modules/socket.io-client/socket.io.js":5,"./button.js":1,"./laser.js":2,"./player.js":4}],4:[function(require,module,exports){
 exports.createPlayer = function(game) {
   var player = game.add.sprite(10, 10, 'astro');
-  player.x = 1024;
-  player.y = 512;
+  player.x = 1152;
+  player.y = 620;
 
   game.physics.enable(player, Phaser.Physics.ARCADE);
   player.body.setSize(10, 10, 0, 0);

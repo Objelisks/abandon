@@ -1,7 +1,7 @@
 exports.createPlayer = function(game) {
   var player = game.add.sprite(10, 10, 'astro');
-  player.x = 1024;
-  player.y = 512;
+  player.x = 1152;
+  player.y = 620;
 
   game.physics.enable(player, Phaser.Physics.ARCADE);
   player.body.setSize(10, 10, 0, 0);
