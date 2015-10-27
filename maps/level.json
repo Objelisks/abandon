@@ -22,8 +22,132 @@
          "width":256,
          "x":0,
          "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "height":128,
+         "name":"obj",
+         "objects":[
+                {
+                 "gid":401,
+                 "height":8,
+                 "id":6,
+                 "name":"laser1",
+                 "properties":
+                    {
+                     "dir":"n"
+                    },
+                 "rotation":0,
+                 "type":"laser",
+                 "visible":true,
+                 "width":8,
+                 "x":1128,
+                 "y":520
+                }, 
+                {
+                 "gid":401,
+                 "height":8,
+                 "id":8,
+                 "name":"laser2",
+                 "properties":
+                    {
+                     "dir":"n"
+                    },
+                 "rotation":0,
+                 "type":"laser",
+                 "visible":true,
+                 "width":8,
+                 "x":1104,
+                 "y":520
+                }, 
+                {
+                 "gid":402,
+                 "height":8,
+                 "id":9,
+                 "name":"laser3",
+                 "properties":
+                    {
+                     "dir":"s"
+                    },
+                 "rotation":0,
+                 "type":"laser",
+                 "visible":true,
+                 "width":8,
+                 "x":1144,
+                 "y":488
+                }, 
+                {
+                 "gid":403,
+                 "height":8,
+                 "id":10,
+                 "name":"laser4",
+                 "properties":
+                    {
+                     "dir":"w"
+                    },
+                 "rotation":0,
+                 "type":"laser",
+                 "visible":true,
+                 "width":8,
+                 "x":1056,
+                 "y":480
+                }, 
+                {
+                 "gid":404,
+                 "height":8,
+                 "id":11,
+                 "name":"laser5",
+                 "properties":
+                    {
+                     "dir":"e"
+                    },
+                 "rotation":0,
+                 "type":"laser",
+                 "visible":true,
+                 "width":8,
+                 "x":936,
+                 "y":416
+                }, 
+                {
+                 "gid":405,
+                 "height":8,
+                 "id":13,
+                 "name":"button1",
+                 "properties":
+                    {
+                     "targets":"[\"laser1\", \"laser2\"]"
+                    },
+                 "rotation":0,
+                 "type":"button",
+                 "visible":true,
+                 "width":8,
+                 "x":1088,
+                 "y":512
+                }, 
+                {
+                 "gid":405,
+                 "height":8,
+                 "id":15,
+                 "name":"button2",
+                 "properties":
+                    {
+                     "targets":"[\"laser4\"]"
+                    },
+                 "rotation":0,
+                 "type":"button",
+                 "visible":true,
+                 "width":8,
+                 "x":1000,
+                 "y":512
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "width":256,
+         "x":0,
+         "y":0
         }],
- "nextobjectid":1,
+ "nextobjectid":16,
  "orientation":"orthogonal",
  "properties":
     {
@@ -45,6 +169,22 @@
             },
          "spacing":0,
          "tilecount":400,
+         "tileheight":8,
+         "tilewidth":8
+        }, 
+        {
+         "firstgid":401,
+         "image":"..\/assets\/editor.png",
+         "imageheight":8,
+         "imagewidth":64,
+         "margin":0,
+         "name":"editor",
+         "properties":
+            {
+
+            },
+         "spacing":0,
+         "tilecount":8,
          "tileheight":8,
          "tilewidth":8
         }],

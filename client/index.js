@@ -1,4 +1,111 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+exports.createButton = function(game, obj) {
+  var button = game.add.sprite(obj.x, obj.y-4, 'button', 0);
+  button.bringToTop();
+  game.physics.enable(button, Phaser.Physics.ARCADE);
+  button.body.allowGravity = false;
+  button.body.immovable = true;
+  button.pressTimer = 0;
+  button.update = function() {
+    if(this.pressTimer > 0) {
+      this.pressTimer -= 1;
+      if(this.pressTimer <= 0) {
+        this.frame = 0;
+      }
+    }
+
+    var colliding = this.game.physics.arcade.collide(this, this.game.player);
+    if(this.frame === 0 && this.body.touching.up) {
+      this.frame = 1;
+      this.pressTimer = 60;
+
+      var targets = JSON.parse(obj.properties.targets);
+      targets.forEach(function(id) {
+        game.ids[id].toggle();
+      });
+    }
+    this.wasColliding = colliding;
+  }
+
+  return button;
+}
+
+},{}],2:[function(require,module,exports){
+var getLaserOffset = function(x, y, dir) {
+  switch(dir) {
+    case 0: return {x:x+2, y:y+8};
+    case 1: return {x:x+2, y:y-4};
+    case 2: return {x:x+8, y:y+2};
+    case 3: return {x:x-4, y:y+2};
+  }
+}
+
+
+var getOffset = function(x, y, offx, offy, dir) {
+  switch(dir) {
+    case 0: return {x:x, y:y-offy};
+    case 1: return {x:x, y:y+offy};
+    case 2: return {x:x-offx, y:y};
+    case 3: return {x:x+offx, y:y};
+  }
+}
+
+var createBeam = function(game, laser) {
+  var dir = laser.direction;
+  var beam = [];
+  var start = getLaserOffset(laser.x, laser.y, dir);
+  var off = getOffset(start.x, start.y, 4, 4, dir);
+  var solid = game.tilemap.getTileWorldXY(off.x, off.y) !== null;
+  while(!solid) {
+    var newBeam = game.add.sprite(0, 0, 'beam', Math.floor(dir/2));
+    newBeam.x = off.x;
+    newBeam.y = off.y;
+    var frame = Math.floor(dir/2);
+    newBeam.animations.add('active', [frame, frame+2], 20, true);
+    newBeam.animations.play('active');
+    beam.push(newBeam);
+    //newBeam.bringToTop();
+
+    off = getOffset(off.x, off.y, 4, 4, dir);
+    solid = game.tilemap.getTileWorldXY(off.x, off.y) !== null;
+  }
+  return beam;
+}
+
+exports.createLaser = function(game, obj) {
+  var direction = 0;
+  switch(obj.properties.dir) {
+    case 'n': direction = 0; break;
+    case 's': direction = 1; break;
+    case 'w': direction = 2; break;
+    case 'e': direction = 3; break;
+  }
+
+  var laser = game.add.sprite(obj.x, obj.y-8, 'laser', direction*2);
+  laser.direction = direction;
+  laser.active = true;
+
+  laser.toggle = function() {
+    laser.active = !laser.active;
+    if(laser.beam) {
+      laser.beam.forEach(function(beam) {
+        beam.exists = !beam.exists;
+      })
+    }
+    laser.emitter.on = laser.active;
+  }
+
+  laser.beam = createBeam(game, laser);
+  laser.bringToTop();
+
+  laser.emitter = game.add.emitter(laser.beam[laser.beam.length-1].x+2, laser.beam[laser.beam.length-1].y+2, 20);
+  laser.emitter.makeParticles('spark', 0);
+  laser.emitter.start(false, 20, 30);
+
+  return laser;
+}
+
+},{}],3:[function(require,module,exports){
 var io = require('../node_modules/socket.io-client/socket.io.js');
 var socket = io('http://localhost/');
 socket.on('connect', function() {
@@ -10,12 +117,25 @@ socket.on('connect', function() {
   });
 });
 
-var tilemap, cursors;
+var players = require('./player.js');
+var lasers = require('./laser.js');
+var buttons = require('./button.js');
+
+var cursors;
 var p;
+
+var objectsMap = {
+  'laser': lasers.createLaser,
+  'button': buttons.createButton
+}
 
 var preload = function() {
   game.load.spritesheet('tiles', '../assets/tiles.png', 8, 8);
   game.load.spritesheet('astro', '../assets/astro.png', 10, 10);
+  game.load.spritesheet('laser', '../assets/beamsocket.png', 8, 8);
+  game.load.spritesheet('beam', '../assets/beam.png', 4, 4);
+  game.load.spritesheet('button', '../assets/button.png', 6, 4);
+  game.load.spritesheet('spark', '../assets/jet3.png', 4, 4);
   game.load.tilemap('level', '../maps/level.json', null, Phaser.Tilemap.TILED_JSON);
 }
 
@@ -24,11 +144,12 @@ var create = function() {
   game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
   game.scale.setUserScale(2, 2);
   game.antialias = false;
+  game.ids = {};
 
   game.physics.startSystem(Phaser.Physics.ARCADE);
   game.physics.arcade.gravity.y = 100;
 
-  tilemap = game.add.tilemap('level');
+  var tilemap = game.add.tilemap('level');
   tilemap.addTilesetImage('tiles', 'tiles');
   tilemap.bg = tilemap.createLayer('bg');
   tilemap.fg = tilemap.createLayer('fg');
@@ -36,80 +157,72 @@ var create = function() {
   tilemap.fg.resizeWorld();
   tilemap.setCollisionBetween(1, 256);
 
-  p = game.add.sprite(10, 10, 'astro');
-  p.x = 1024;
-  p.y = 512;
-  game.physics.enable(p, Phaser.Physics.ARCADE);
+  game.tilemap = tilemap;
 
-  /*
-  movement mechanics:
+  game.player = players.createPlayer(game);
 
-  */
+  game.camera.follow(game.player, Phaser.Camera.FOLLOW_PLATFORMER);
 
-  //p.body.drag.set(100, 50);
-  //p.body.maxVelocity.y = 500;
-  p.body.setSize(10, 10, 0, 0);
-  //p.body.tilePadding.set(16, 16);
-  p.body.collideWorldBounds = true;
-  //p.body.allowRotation = false;
+  game.cursors = game.input.keyboard.createCursorKeys();
 
-  game.camera.follow(p, Phaser.Camera.FOLLOW_PLATFORMER);
 
-  cursors = game.input.keyboard.createCursorKeys();
+  tilemap.objects.obj.forEach(function(obj) {
+    game.ids[obj.name] = objectsMap[obj.type](game, obj);
+  });
+
 }
 
 var update = function() {
-  game.physics.arcade.collide(p, tilemap.fg);
-
-  p.body.velocity.x = 0;
-  if(cursors.up.isDown && p.body.onFloor()) {
-    p.body.velocity.y = -80;
-  }
-
-  if(cursors.left.isDown) {
-    if(p.body.blocked.left && tilemap.getTileWorldXY(p.body.x+5-8, p.body.y-6) === null) {
-      // clamber
-      p.body.velocity.y = -40;
-    }
-
-    // move left
-    p.body.velocity.x = -30;
-  }
-  if(cursors.right.isDown) {
-    if(p.body.blocked.right && tilemap.getTileWorldXY(p.body.x+5+8, p.body.y-6) === null) {
-      // clamber
-      p.body.velocity.y = -40;
-    }
-
-    p.body.velocity.x = 30;
-  }
-
-  //game.physics.arcade.collide(p, tilemap.fg);
-    //downLastFrame = p.body.onFloor();
-
-/*
-  if(p.body.right < game.world.bounds.x) {
-    p.body.x += game.world.bounds.width;
-    tilemap.bg.destroy();
-    tilemap.terrain.destroy();
-    tilemap.fg.destroy();
-    tilemap.destroy();
-    tilemap = createTilesection(-1, 0);
-  }
-*/
-
-  //tilemap.bg.sendToBack();
-  //tilemap.fg.bringToTop();
+  game.tilemap.bg.sendToBack();
+  game.tilemap.fg.bringToTop();
 }
 
 var render = function() {
-  game.debug.bodyInfo(p, 32, 32);
+  //game.debug.bodyInfo(p, 32, 32);
 }
 
 var game = new Phaser.Game(512, 512, Phaser.AUTO, 'thing', {
   preload: preload, create: create, update: update, render: render });
 
-},{"../node_modules/socket.io-client/socket.io.js":2}],2:[function(require,module,exports){
+},{"../node_modules/socket.io-client/socket.io.js":5,"./button.js":1,"./laser.js":2,"./player.js":4}],4:[function(require,module,exports){
+exports.createPlayer = function(game) {
+  var player = game.add.sprite(10, 10, 'astro');
+  player.x = 1024;
+  player.y = 512;
+
+  game.physics.enable(player, Phaser.Physics.ARCADE);
+  player.body.setSize(10, 10, 0, 0);
+  player.body.collideWorldBounds = true;
+
+  player.update = function() {
+    game.physics.arcade.collide(this, game.tilemap.fg);
+
+    this.body.velocity.x = 0;
+    if(game.cursors.up.isDown && this.body.onFloor()) {
+      this.body.velocity.y = -80;
+    }
+
+    if(game.cursors.left.isDown) {
+      if(this.body.blocked.left && game.tilemap.getTileWorldXY(this.body.x+5-8, this.body.y-6) === null) {
+        // clamber
+        this.body.velocity.y = -40;
+      }
+      // move left
+      this.body.velocity.x = -30;
+    }
+
+    if(game.cursors.right.isDown) {
+      if(this.body.blocked.right && game.tilemap.getTileWorldXY(this.body.x+5+8, this.body.y-6) === null) {
+        // clamber
+        this.body.velocity.y = -40;
+      }
+      this.body.velocity.x = 30;
+    }
+  }
+  return player;
+}
+
+},{}],5:[function(require,module,exports){
 (function (global){
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.io=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 
@@ -7101,4 +7214,4 @@ function toArray(list, index) {
 });
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}]},{},[1]);
+},{}]},{},[3]);
