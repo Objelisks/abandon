@@ -1,7 +1,7 @@
 exports.createPlayer = function(game) {
   var player = game.add.sprite(10, 10, 'astro');
   player.x = 1152;
-  player.y = 620;
+  player.y = 600;
 
   game.physics.enable(player, Phaser.Physics.ARCADE);
   player.body.setSize(10, 10, 0, 0);
@@ -11,12 +11,12 @@ exports.createPlayer = function(game) {
     game.physics.arcade.collide(this, game.tilemap.fg);
 
     this.body.velocity.x = 0;
-    if(game.cursors.up.isDown && this.body.onFloor()) {
+    if(game.cursors.up.isDown && (this.body.onFloor() || this.body.touching.down)) {
       this.body.velocity.y = -80;
     }
 
     if(game.cursors.left.isDown) {
-      if(this.body.blocked.left && game.tilemap.getTileWorldXY(this.body.x+5-8, this.body.y-6) === null) {
+      if((this.body.touching.left || this.body.blocked.left) && game.tilemap.getTileWorldXY(this.body.x+5-8, this.body.y-6) === null) {
         // clamber
         this.body.velocity.y = -40;
       }
@@ -25,7 +25,7 @@ exports.createPlayer = function(game) {
     }
 
     if(game.cursors.right.isDown) {
-      if(this.body.blocked.right && game.tilemap.getTileWorldXY(this.body.x+5+8, this.body.y-6) === null) {
+      if((this.body.touching.right || this.body.blocked.right) && game.tilemap.getTileWorldXY(this.body.x+5+8, this.body.y-6) === null) {
         // clamber
         this.body.velocity.y = -40;
       }

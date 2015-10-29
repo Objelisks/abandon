@@ -12,16 +12,19 @@ socket.on('connect', function() {
 var players = require('./player.js');
 var lasers = require('./laser.js');
 var buttons = require('./button.js');
+var elevators = require('./elevator.js');
 
 var cursors;
 var p;
 
 var objectsMap = {
   'laser': lasers.createLaser,
-  'button': buttons.createButton
+  'button': buttons.createButton,
+  'elevator': elevators.createElevator
 }
 
 var preload = function() {
+  game.load.image('elevator', '../assets/elevator.png', 24, 8);
   game.load.spritesheet('tiles', '../assets/tiles.png', 8, 8);
   game.load.spritesheet('astro', '../assets/astro.png', 10, 10);
   game.load.spritesheet('laser', '../assets/beamsocket.png', 8, 8);
@@ -50,16 +53,15 @@ var create = function() {
   tilemap.setCollisionBetween(1, 256);
 
   game.tilemap = tilemap;
-
   game.player = players.createPlayer(game);
-
-  //game.camera.follow(game.player, Phaser.Camera.FOLLOW_PLATFORMER);
-
   game.cursors = game.input.keyboard.createCursorKeys();
 
-
   tilemap.objects.obj.forEach(function(obj) {
-    game.ids[obj.name] = objectsMap[obj.type](game, obj);
+    if(obj.type) {
+      game.ids[obj.name] = objectsMap[obj.type](game, obj);
+    } else {
+      game.ids[obj.name] = obj;
+    }
   });
 
 }
